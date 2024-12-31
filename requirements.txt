@@ -1,0 +1,3 @@
+laion-clap
+open_clip_torch
+pillow
