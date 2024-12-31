@@ -34,7 +34,7 @@ def load_models():
     import laion_clap
     import open_clip
 
-    clap_model = laion_clap.CLAP_Module(enable_fusion=True, device="cuda")
+    clap_model = laion_clap.CLAP_Module(enable_fusion=False, device="cuda")
     clap_model.load_ckpt()
     clip_model, _, preprocess = open_clip.create_model_and_transforms(
         "ViT-B-32", pretrained="laion2b_s34b_b79k"
