@@ -1,3 +1,5 @@
 laion-clap
 open_clip_torch
 pillow
+pytorchvideo
+einops

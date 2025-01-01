@@ -45,6 +45,19 @@ def load_models():
     return clap_model, clip_model, tokenizer, preprocess
 
 
+def load_image_bind():
+    import sys
+
+    sys.path.append("./ImageBind/")
+    from ImageBind.imagebind.models import imagebind_model
+
+    model = imagebind_model.imagebind_huge(pretrained=True)
+    model.eval()
+    model.to("cuda")
+
+    return model
+
+
 def cosine_distance(a, b):
     return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
@@ -54,7 +67,7 @@ def l2_distance(a, b):
     return distance
 
 
-def main():
+def test_clap_clip():
     datasets = read_datasets()
     clap_model, clip_model, _, preprocess = load_models()
     audio_embed = clap_model.get_audio_embedding_from_filelist(
@@ -68,6 +81,49 @@ def main():
         image_embedding = features[0].detach().numpy()
         distance = cosine_distance(image_embedding, audio_embed)
         print(f"{name}: {distance}")
+
+
+def test_imagebind():
+    datasets = read_datasets()
+    model = load_image_bind()
+
+    import torch
+    from ImageBind.imagebind.data import (
+        load_and_transform_audio_data,
+        load_and_transform_vision_data,
+    )
+    from ImageBind.imagebind.models.imagebind_model import ModalityType
+
+    images = []
+    for _, dataset in datasets.items():
+        images.append(dataset["image"])
+
+    with torch.no_grad():
+        audio_embed = (
+            model(
+                {
+                    ModalityType.AUDIO: load_and_transform_audio_data(
+                        [datasets["bird"]["audio"]], "cuda"
+                    ),
+                }
+            )[ModalityType.AUDIO][0]
+            .cpu()
+            .detach()
+            .numpy()
+        )
+
+        image_embeds = model(
+            {
+                ModalityType.VISION: load_and_transform_vision_data(images, "cuda"),
+            }
+        )[ModalityType.VISION]
+
+    for image_embedding in image_embeds:
+        print(cosine_distance(image_embedding.cpu().detach().numpy(), audio_embed))
+
+
+def main():
+    test_imagebind()
 
 
 if __name__ == "__main__":
