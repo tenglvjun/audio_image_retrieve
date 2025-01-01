@@ -94,32 +94,28 @@ def test_imagebind():
     )
     from ImageBind.imagebind.models.imagebind_model import ModalityType
 
+    keys = list(datasets)
     images = []
+    audios = []
     for _, dataset in datasets.items():
         images.append(dataset["image"])
+        audios.append(dataset["audio"])
 
     with torch.no_grad():
-        audio_embed = (
-            model(
-                {
-                    ModalityType.AUDIO: load_and_transform_audio_data(
-                        [datasets["bird"]["audio"]], "cuda"
-                    ),
-                }
-            )[ModalityType.AUDIO][0]
-            .cpu()
-            .detach()
-            .numpy()
-        )
-
-        image_embeds = model(
+        embeddings = model(
             {
                 ModalityType.VISION: load_and_transform_vision_data(images, "cuda"),
+                ModalityType.AUDIO: load_and_transform_audio_data(audios, "cuda"),
             }
-        )[ModalityType.VISION]
+        )
 
-    for image_embedding in image_embeds:
-        print(cosine_distance(image_embedding.cpu().detach().numpy(), audio_embed))
+    resutls = torch.softmax(
+        embeddings[ModalityType.VISION] @ embeddings[ModalityType.AUDIO].T, dim=-1
+    )
+    np.set_printoptions(precision=3)
+    for i, key in enumerate(keys):
+        for idx, result in enumerate(resutls[i]):
+            print(f"{key} - {keys[idx]}: {result.cpu().detach().numpy()}")
 
 
 def main():
